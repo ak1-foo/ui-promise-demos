@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scroll Jack</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap { position: relative; max-width: 420px; }
+  .vp {
+    height: 360px; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .bad .vp { touch-action: none; }
+  .row {
+    height: 36px; display: flex; align-items: center; padding: 0 14px;
+    border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px;
+  }
+  .row.target { background: #3a2f10; color: #ffd166; font-weight: 700; }
+  .judge {
+    position: absolute; left: 0; right: 0; top: 180px; height: 2px;
+    background: var(--danger); box-shadow: 0 0 8px var(--danger); pointer-events: none;
+  }
+  .judge::after {
+    content: '判定線'; position: absolute; right: 6px; top: -20px;
+    font-size: 11px; color: var(--danger);
+  }
+</style>
+</head>
+<body>
+  <h1>スクロールが「段」になる</h1>
+  <p class="lead">黄色い行を、赤い判定線にぴったり合わせてみてください。</p>
+  <div class="modes">
+    <button class="bad" data-mode="bad">約束を破る版</button>
+    <button class="good" data-mode="good">守る版</button>
+  </div>
+  <div class="wrap">
+    <div class="vp" id="vp"></div>
+    <div class="judge"></div>
+  </div>
+  <p class="log" id="log"></p>
+  <p class="sub">破る版はホイール1回で360px（1画面）ずつ飛びます。音ゲーで言う量子化ソフラン。</p>
+
+<script src="common.js"></script>
+<script>
+  const vp = document.getElementById('vp');
+  const log = document.getElementById('log');
+  const ROW = 36, STEP = 360, TARGET = 17, LINE = 180;
+  for (let i = 0; i < 40; i++) {
+    const r = document.createElement('div');
+    r.className = 'row' + (i === TARGET ? ' target' : '');
+    r.textContent = i === TARGET ? '▶ ここを判定線に合わせる' : `${i + 1} 行目`;
+    vp.appendChild(r);
+  }
+
+  let getMode, locked = false, touchY = null;
+
+  function update() {
+    const diff = Math.round(TARGET * ROW + ROW / 2 - vp.scrollTop - LINE);
+    Math.abs(diff) <= 6 ? say(log, 'ぴったり！', 'good') : say(log, `ズレ: ${diff > 0 ? '+' : ''}${diff}px`, '');
+  }
+  function jump(dir) {
+    if (locked || !dir) return;
+    locked = true;
+    const max = vp.scrollHeight - vp.clientHeight;
+    const next = Math.max(0, Math.min(max, (Math.round(vp.scrollTop / STEP) + dir) * STEP));
+    vp.scrollTo({ top: next, behavior: 'smooth' });
+    setTimeout(() => { locked = false; }, 700);
+  }
+
+  vp.addEventListener('scroll', update);
+  vp.addEventListener('wheel', e => {
+    if (getMode() !== 'bad') return;
+    e.preventDefault();
+    jump(Math.sign(e.deltaY));
+  }, { passive: false });
+  vp.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+  vp.addEventListener('touchmove', e => { if (getMode() === 'bad') e.preventDefault(); }, { passive: false });
+  vp.addEventListener('touchend', e => {
+    if (getMode() !== 'bad' || touchY === null) return;
+    const d = touchY - e.changedTouches[0].clientY;
+    if (Math.abs(d) > 30) jump(Math.sign(d));
+    touchY = null;
+  });
+
+  getMode = setupModes(() => { vp.scrollTop = 0; update(); });
+</script>
+</body>
+</html>

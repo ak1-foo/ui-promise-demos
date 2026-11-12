@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout Shift</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .stage { display: flex; flex-direction: column; gap: 12px; }
+  .slot { height: 44px; width: 240px; border-radius: 8px; }
+  .bad .slot:not(.loaded) { display: none; }
+  .good .slot:not(.loaded) { background: var(--card); border: 1px dashed var(--line); }
+  .slot.loaded {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(90deg, #5a3cc2, #c23c8a); color: #fff; font-size: 13px;
+  }
+</style>
+</head>
+<body>
+  <h1>押す直前に、ボタンがずれる</h1>
+  <p class="lead">「キャンセル」を押してみてください。</p>
+  <div class="modes">
+    <button class="bad" data-mode="bad">約束を破る版</button>
+    <button class="good" data-mode="good">守る版</button>
+  </div>
+  <div class="stage">
+    <div class="slot" id="slot"></div>
+    <button class="btn danger" id="buy">購入する（¥49,800）</button>
+    <button class="btn" id="cancel">キャンセル</button>
+  </div>
+  <p class="log" id="log"></p>
+  <p class="sub">デモなので、狙った瞬間に広告が入るようにしてあります（2.5秒経っても入ります）。
+    <button class="link" id="reset">もう一度</button></p>
+
+<script src="common.js"></script>
+<script>
+  const slot = document.getElementById('slot');
+  const log = document.getElementById('log');
+  let timer;
+
+  function load() {
+    if (slot.classList.contains('loaded')) return;
+    slot.classList.add('loaded');
+    slot.textContent = '広告: 今だけ半額セール';
+  }
+  function reset() {
+    clearTimeout(timer);
+    slot.classList.remove('loaded');
+    slot.textContent = '';
+    say(log, '');
+    timer = setTimeout(load, 2500);
+  }
+
+  document.getElementById('cancel').addEventListener('pointerenter', () => setTimeout(load, 120));
+  document.getElementById('buy').addEventListener('click', () => say(log, '「購入する」が押されました（¥49,800）', 'bad'));
+  document.getElementById('cancel').addEventListener('click', () => say(log, 'キャンセルできました', 'good'));
+  document.getElementById('reset').addEventListener('click', reset);
+
+  setupModes(reset);
+</script>
+</body>
+</html>
